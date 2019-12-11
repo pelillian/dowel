@@ -8,6 +8,7 @@ import os
 import sys
 
 import dateutil.tz
+import numpy as np
 
 from dowel import LogOutput
 from dowel.tabular_input import TabularInput
@@ -22,30 +23,38 @@ class StdOutput(LogOutput):
 
     def __init__(self, with_timestamp=True):
         self._with_timestamp = with_timestamp
+        self.tabular = TabularInput()
 
     @property
     def types_accepted(self):
-        """Accept str and TabularInput objects."""
-        return (str, TabularInput)
+        """Accept str and scalar objects."""
+        return (str, ) + np.ScalarType
 
-    def record(self, data, prefix=''):
+    @property
+    def keys_accepted(self):
+        """Accept all keys."""
+        return r'^'
+
+    def record(self, key, value, prefix=''):
         """Log data to console."""
-        if isinstance(data, str):
-            out = prefix + data
-            if self._with_timestamp:
-                now = datetime.datetime.now(dateutil.tz.tzlocal())
-                timestamp = now.strftime('%Y-%m-%d %H:%M:%S')
-                out = '%s | %s' % (timestamp, out)
-        elif isinstance(data, TabularInput):
-            out = str(data)
-            data.mark_str()
+        if not key:
+            if isinstance(value, str):
+                out = prefix + value
+                if self._with_timestamp:
+                    now = datetime.datetime.now(dateutil.tz.tzlocal())
+                    timestamp = now.strftime('%Y-%m-%d %H:%M:%S')
+                    out = '%s | %s' % (timestamp, out)
+                print(out)
+            else:
+                raise ValueError('Unacceptable type')
         else:
-            raise ValueError('Unacceptable type')
-
-        print(out)
+            self.tabular.record(key, value)
 
     def dump(self, step=None):
         """Flush data to standard output stream."""
+        if not self.tabular.empty:
+            print(str(self.tabular))
+            self.tabular.clear()
         sys.stdout.flush()
 
 
@@ -81,25 +90,36 @@ class TextOutput(FileOutput):
     def __init__(self, file_name, with_timestamp=True):
         super().__init__(file_name, 'a')
         self._with_timestamp = with_timestamp
-        self._delimiter = ' | '
+        self.tabular = TabularInput()
 
     @property
     def types_accepted(self):
-        """Accept str objects only."""
-        return (str, TabularInput)
+        """Accept str and scalar objects."""
+        return (str, ) + np.ScalarType
 
-    def record(self, data, prefix=''):
+    @property
+    def keys_accepted(self):
+        """Accept all keys."""
+        return r'^'
+
+    def record(self, key, value, prefix=''):
         """Log data to text file."""
-        if isinstance(data, str):
-            out = prefix + data
-            if self._with_timestamp:
-                now = datetime.datetime.now(dateutil.tz.tzlocal())
-                timestamp = now.strftime('%Y-%m-%d %H:%M:%S')
-                out = '%s | %s' % (timestamp, out)
-        elif isinstance(data, TabularInput):
-            out = str(data)
-            data.mark_str()
+        if not key:
+            if isinstance(value, str):
+                out = prefix + value
+                if self._with_timestamp:
+                    now = datetime.datetime.now(dateutil.tz.tzlocal())
+                    timestamp = now.strftime('%Y-%m-%d %H:%M:%S')
+                    out = '%s | %s' % (timestamp, out)
+                self._log_file.write(out + '\n')
+            else:
+                raise ValueError('Unacceptable type')
         else:
-            raise ValueError('Unacceptable type.')
+            self.tabular.record(key, value)
 
-        self._log_file.write(out + '\n')
+    def dump(self, step=None):
+        """Flush data to log file."""
+        if not self.tabular.empty:
+            self._log_file.write(str(self.tabular) + '\n')
+            self.tabular.clear()
+        self._log_file.flush()

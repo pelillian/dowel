@@ -10,7 +10,6 @@ from dowel.csv_output import CsvOutput  # noqa: I100
 from dowel.tensor_board_output import TensorBoardOutput
 
 logger = Logger()
-tabular = TabularInput()
 
 __all__ = [
     'Histogram',
@@ -23,5 +22,4 @@ __all__ = [
     'TabularInput',
     'TensorBoardOutput',
     'logger',
-    'tabular',
 ]

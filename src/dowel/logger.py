@@ -133,6 +133,7 @@ foo  bar
 """
 import abc
 import contextlib
+import re
 import warnings
 
 from dowel.utils import colorize
@@ -143,19 +144,28 @@ class LogOutput(abc.ABC):
 
     @property
     def types_accepted(self):
-        """Pass these types to this logger output.
+        """Pass these value types to this logger output.
 
         The types in this tuple will be accepted by this output.
 
-        :return: A tuple containing all valid input types.
+        :return: A tuple containing all valid input value types.
         """
         return ()
 
+    @property
+    def keys_accepted(self):
+        """Pass keys matching this regex to this logger output.
+
+        :return: A regex string matching keys to be sent to this output.
+        """
+        return r'^$'
+
     @abc.abstractmethod
-    def record(self, data, prefix=''):
+    def record(self, key, value, prefix=''):
         """Pass logger data to this output.
 
-        :param data: The data to be logged by the output.
+        :param key: The key to be logged by the output.
+        :param value: The value to be logged by the output.
         :param prefix: A prefix placed before a log entry in text outputs.
         """
         pass
@@ -186,7 +196,7 @@ class Logger:
         self._warned_once = set()
         self._disable_warnings = False
 
-    def log(self, data):
+    def logkv(self, key, value):
         """Magic method that takes in all different types of input.
 
         This method is the main API for the logger. Any data to be logged goes
@@ -195,7 +205,8 @@ class Logger:
         Any data sent to this method is sent to all outputs that accept its
         type (defined in the types_accepted property).
 
-        :param data: Data to be logged. This can be any type specified in the
+        :param key: Key to be logged. This must be a string.
+        :param value: Value to be logged. This can be any type specified in the
          types_accepted property of any of the logger outputs.
         """
         if not self._outputs:
@@ -203,15 +214,20 @@ class Logger:
 
         at_least_one_logged = False
         for output in self._outputs:
-            if isinstance(data, output.types_accepted):
-                output.record(data, prefix=self._prefix_str)
+            if isinstance(value, output.types_accepted) and re.match(
+                    output.keys_accepted, key):
+                output.record(key, value, prefix=self._prefix_str)
                 at_least_one_logged = True
 
         if not at_least_one_logged:
             warning = (
                 'Log data of type {} was not accepted by any output'.format(
-                    type(data).__name__))
+                    type(value).__name__))
             self._warn(warning)
+
+    def log(self, value):
+        """Log just a value without a key."""
+        self.logkv('', value)
 
     def add_output(self, output):
         """Add a new output to the logger.

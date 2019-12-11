@@ -32,7 +32,7 @@ class TestTextOutput:
         fake_timestamp(mock_datetime)
 
         text = 'TESTING 123 DOWEL'
-        self.text_output.record(text)
+        self.text_output.record('', text)
         self.text_output.dump()
 
         with open(self.log_file.name, 'r') as file:
@@ -40,7 +40,7 @@ class TestTextOutput:
             assert file.read() == correct
 
         more_text = 'MORE TESTING'
-        self.text_output.record(more_text)
+        self.text_output.record('', more_text)
         self.text_output.dump()
 
         with open(self.log_file.name, 'r') as file:
@@ -56,7 +56,7 @@ class TestTextOutput:
         self.text_output = TextOutput(self.log_file.name, with_timestamp=False)
 
         text = 'TESTING 123 DOWEL'
-        self.text_output.record(text)
+        self.text_output.record('', text)
         self.text_output.dump()
 
         with open(self.log_file.name, 'r') as file:
@@ -66,10 +66,8 @@ class TestTextOutput:
     def test_record_tabular(self, mock_datetime):
         fake_timestamp(mock_datetime)
 
-        self.tabular.record('foo', 100)
-        self.tabular.record('bar', 55)
-
-        self.text_output.record(self.tabular)
+        self.text_output.record('foo', 100)
+        self.text_output.record('bar', 55)
         self.text_output.dump()
 
         with open(self.log_file.name, 'r') as file:
@@ -83,7 +81,7 @@ class TestTextOutput:
 
     def test_record_unknown(self, mock_datetime):
         with pytest.raises(ValueError):
-            self.text_output.record(dict())
+            self.text_output.record('', dict())
 
 
 @mock.patch('dowel.simple_outputs.datetime')
@@ -101,7 +99,7 @@ class TestStdOutput:
         fake_timestamp(mock_datetime)
 
         with redirect_stdout(self.str_out):
-            self.std_output.record('test')
+            self.std_output.record('', 'test')
 
         self.std_output.dump()
 
@@ -111,13 +109,11 @@ class TestStdOutput:
     def test_record_tabular(self, mock_datetime):
         fake_timestamp(mock_datetime)
 
-        self.tabular.record('foo', 100)
-        self.tabular.record('bar', 55)
+        self.std_output.record('foo', 100)
+        self.std_output.record('bar', 55)
 
         with redirect_stdout(self.str_out):
-            self.std_output.record(self.tabular)
-
-        self.std_output.dump()
+            self.std_output.dump()
 
         tab = (
             '---  ---\n'
@@ -134,7 +130,7 @@ class TestStdOutput:
         self.std_output = StdOutput(with_timestamp=True)
 
         with redirect_stdout(self.str_out):
-            self.std_output.record('DOWEL')
+            self.std_output.record('', 'DOWEL')
 
         self.std_output.dump()
 
@@ -144,4 +140,4 @@ class TestStdOutput:
 
     def test_record_unknown(self, mock_datetime):
         with pytest.raises(ValueError):
-            self.std_output.record(dict())
+            self.std_output.record('', dict())
